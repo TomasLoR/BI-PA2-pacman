@@ -1,0 +1,114 @@
+# Tahový Pacman (téma: Pacman)
+Autor: Tomáš Peterka
+
+## Téma z Progtestu
+
+Implementujte hru Pacman. Hlavní postava Pacman se snaží sesbírat všechny mince na herním plánu. Během toho se musí vyhýbat všem duchům, kteří se mu v tomto snaží zabránit. Pokud se hráči podaří sesbírat všechny mince, postupuje na další úroveň (jiný herní plán a/nebo obtížnost).
+
+Hra musí splňovat následující funkcionality:
+
+Hra musí dodržovat základní pravidla (př. nelze vykročit z mapy, …).
+
+Implementujte alespoň následující herní mechaniky:
+
+mince (zvýší skóre),
+
+třešně (umožní lovit duchy),
+
+teleporty (umožní hráči se teleportovat z jednoho místa na jiné).
+
+Implementujte alespoň 3 různé druhy chování duchů (umělé inteligence). Druh chování musí jít nastavit pro každého ducha zvlášť.
+
+Stav hry musí být znázorněn vizuálně (př. pokud duchové jsou zranitelní, jsou reprezentováni jiným znakem nebo jsou jinak vykreslení, …).
+
+Hra musí být konfigurovatelná ze souboru:
+
+lze načítat mapy (př. bludiště, startovní pozice duchů, druhy chování duchů, pozice bonusů, …)
+
+definice obtížnosti (př. rychlost duchů, délka jednotlivých módů hry jako je lov duchů, pravděpodobnost na bonusy, …)
+
+Hra umožňuje zobrazovat tabulku nejlepších hráčů.
+
+Kde lze využít polymorfismus? (doporučené)
+
+druhy chování duchů: pronásledování, prchání, predikce pohybu, hlídkování v sektoru, …
+
+efekty bonusů: mince (body), třešnička (změna módu), srdíčko (život navíc), teleport (přemístění hráče), …
+
+mód hry: standardní (duchové chodí dle svých běžných strategií), zběsilý (duchové pronásledují hráče), nezranitelný (duchové jsou pomalejší, dají se zabít), …
+
+rozdělení postav na hracím plánu: hráč, duch
+
+uživatelské rozhraní: konzole, ncurses, SDL, OpenGL (různé varianty), …
+
+## Zadání hry Tahový Pacman
+
+Jedná se o tahovou verzi známé hry pro jednoho hráče "Pacman". Cílem hry je se vyhýbat nepřátelským duchům a mezitím pobrat všechny mince na mapě.
+Naše implementace bude zjednodušena hned několika způsoby. Jak již z názvu vyppvídá hra se bude hrát na tahy, tedy hráč se pohne o jedno políčko na mapě
+a duchové se v reakci na jeho tah pohnou také (v závislosti na svém aktuálním módu). Celá hra (mapa, duchové, mince, třešně...) bude v rozhraní konzole.
+
+Po spuštění aplikace na nás vyskočí menu, ve kterém si budeme moci vybrat obtížnost hry (ze souboru), zobrazit tabulku nejlepších hráčů, hrát hru, či aplikaci vypnout.
+Jakmile spustíme hru samotnou, budeme si navíc moci ještě vybrat mapu (ze souboru). Po výběru mapy již začne samotná hra. Nyní blíže k implementaci.
+
+Celá hra bude repezentována různými znaky:
+
+Legend of chars in game:
+Pacman = 'P'
+Dumb ghost = 'D'
+Smart ghost = 'S'
+Pattern ghost = 'R'
+Frightened ghost = 'f'
+
+Coin = '.'
+Cherry = '@'
+Teleport = 'T'
+Wall = '#'
+Empty tile = ' '
+Ghost spawnpoint = 'g'
+Pacman spawnpoint = 'p'
+
+Samotná mapa pak může vypadat takto:
+
+#######T#######
+#..@...p...@..#
+#.....###.....#
+### ...T... ###
+#.....###.....#
+### ...@... ###
+T.....###.....T
+### ...T... ###
+#..R..###.D...#
+### ...@... ###
+# .@. .S. .@. #
+#######T#######
+
+V mojí implementaci jsem si upravil hned několik pravidel hry Pacman. V mé implementaci bude libovolné množství duchů a 1 Pacman.
+Pokud Pacman sní ducha, duch se oživí na svém příslušném spawnpointu. Pokud avšak duch eliminuje Pacmana Pacman ztratí život a jak pacman tak duchové se respawnou.
+
+Jedno z hracích políček bude třešeň, která Pacmanovi umožní jíst duchy.
+Další zajímavostí jsou teleporty, těch bude libovolné množství a budou Pacmana mezi sebou přemisťovat (středová souměrnost).
+Co se týče duchů, budou 3 druhy. Budou buď: chodit náhodně, nebo prnásledovat Pacmana (BFS) nebo chodit podle určitého paternu.
+Navíc pokud Pacman sní třešeň duchové přejdou do vyděšeného módu. V tomto módu budou utíkat od Pacmana tak dlouho, jak bude
+určeno v souboru obtížnosti. V tomto souboru navíc bude možné zvolit různé rychlosti duchů.
+Hra zkončí pokud Pacman ztratí své 3 životy nebo sebere všechny mince. Po dohrání se uloží skóre do scoreboard (soubor) a aplikace nás přesměruje zpět do menu.
+
+
+### Kde mám polymorfismus?
+CTile:
+
+silný -> virtual void doEffect(const &CPacman) const - vyvolá různý effekt na základě toho o jaké políčko se jedná, tedy například: pokud se bude jednat o CCherry, pacman bude moci jíst duchy => ti musí změnit vzhled a navíc se zvýší skóre hráče o 5
+                                                                                                              : pokud se bude jednat o CTeleport, Pacman bude přemístěn před protější teleport
+                                                                                                              : pokud se bude jednat o CCoinu přičte se skóre o jedna a sníží se counter coinů (0 coinů == game-ending podmínka)
+                                                                                                              : pokud se bude jednat o CWall oznámíme hráči že dokázal nemožné
+                                                                                                              : pokud se bude jednat o CEmpty oznámíme hráči, že vstoupil na prázdné pole
+													      : pokud se bude jednat o CPacmanSpawn, pridáme scóre pokud jsou duchové ve zděšeném módu
+													      : pokud se bude jednat o CGhostSpawn pričteme scóre a spawnpoint "zneviditelníme"
+slabý -> virtual void print() const - výpis ruzně vypadajících polí
+      -> virtual void canStepOn() const - zjištění jestli se na dané pole dá vkročit
+
+CGhost:
+
+silný -> virtual void move(const CMap& map, const CPosition &pacPos) - duch se pohne různě, podle toho v jakém módu se zrovna nachází, tedy například: pokud se bude jednat o CGhostDumb, jeho pohyb bude náhodný
+                                                                                                                                                     : pokud se bude jednat o CSmartGhost, tak bude přes hledací algoritmus nahánět Pacmana
+                                                                                                                                                     : pokud se bude jednat o CPatternGhost, tak ten se bude pohybovat v určitém paternu
+slabý -> virtual void print() const - výpis ruzně vypadajících duchů
